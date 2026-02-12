@@ -99,14 +99,20 @@ fi
 
 # Install required packages
 PACKAGES="unzip wget-ssl curl ipset iptables iptables-mod-tproxy iptables-mod-socket \
-iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat ipt2socks ca-bundle"
+iptables-mod-iprange iptables-mod-conntrack-extra kmod-ipt-nat ca-bundle"
 
 for pkg in $PACKAGES; do
     if ! opkg list-installed | grep -q "^$pkg "; then
         echo "Installing $pkg..."
-        opkg install $pkg 2>/dev/null
+        opkg install $pkg 2>/dev/null || echo "  Warning: $pkg not available"
     fi
 done
+
+# Ensure unzip is installed (critical for extracting packages)
+if ! which unzip >/dev/null 2>&1; then
+    echo -e "${RED}Error: unzip is required but not installed!${NC}"
+    opkg install unzip || exit 1
+fi
 
 # Get architecture for downloads
 read release arch << EOF
@@ -186,8 +192,18 @@ if [ -f "/etc/init.d/passwall" ]; then
 else
     echo ""
     echo -e "${RED}Installation failed!${NC}"
-    echo -e "${RED}Please check your internet connection and try again.${NC}"
-    exit 1
+    echo -e "${YELLOW}Trying alternative installation from opkg feeds...${NC}"
+    opkg update
+    opkg install luci-app-passwall
+    
+    if [ -f "/etc/init.d/passwall" ]; then
+        echo -e "${GREEN}Passwall 1 installed from opkg feeds!${NC}"
+        /etc/init.d/passwall enable
+    else
+        echo -e "${RED}Installation failed from all sources.${NC}"
+        echo -e "${RED}Please check your internet connection and try again.${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${CYAN}Done!${NC}"

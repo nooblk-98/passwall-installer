@@ -116,9 +116,15 @@ kmod-inet-diag kmod-netlink-diag kmod-tun ipset"
 for pkg in $PACKAGES; do
     if ! opkg list-installed | grep -q "^$pkg "; then
         echo "Installing $pkg..."
-        opkg install $pkg 2>/dev/null
+        opkg install $pkg 2>/dev/null || echo "  Warning: $pkg not available"
     fi
 done
+
+# Ensure unzip is installed (critical for extracting packages)
+if ! which unzip >/dev/null 2>&1; then
+    echo -e "${RED}Error: unzip is required but not installed!${NC}"
+    opkg install unzip || exit 1
+fi
 
 # Get architecture for downloads
 read release arch << EOF
@@ -203,8 +209,18 @@ if [ -f "/etc/init.d/passwall2" ]; then
 else
     echo ""
     echo -e "${RED}Installation failed!${NC}"
-    echo -e "${RED}Please check your internet connection and try again.${NC}"
-    exit 1
+    echo -e "${YELLOW}Trying alternative installation from opkg feeds...${NC}"
+    opkg update
+    opkg install luci-app-passwall2
+    
+    if [ -f "/etc/init.d/passwall2" ]; then
+        echo -e "${GREEN}Passwall 2 installed from opkg feeds!${NC}"
+        /etc/init.d/passwall2 enable
+    else
+        echo -e "${RED}Installation failed from all sources.${NC}"
+        echo -e "${RED}Please check your internet connection and try again.${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${CYAN}Done!${NC}"
