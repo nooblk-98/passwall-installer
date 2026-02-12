@@ -114,8 +114,8 @@ $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
 EOF
 
 # Set GitHub release URLs (official Openwrt-Passwall/openwrt-passwall repository)
-GITHUB_BASE="https://github.com/Openwrt-Passwall/openwrt-passwall/releases/latest/download"
-PACKAGES_BASE="https://github.com/Openwrt-Passwall/openwrt-passwall-packages/releases/latest/download"
+GITHUB_PW="https://github.com/Openwrt-Passwall/openwrt-passwall/releases/latest/download"
+GITHUB_PW2="https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/latest/download"
 
 # Create temporary directory
 TMP_DIR="/tmp/passwall_install"
@@ -123,31 +123,34 @@ rm -rf $TMP_DIR
 mkdir -p $TMP_DIR
 cd $TMP_DIR
 
-echo -e "${YELLOW}Downloading Passwall 1 packages from GitHub...${NC}"
+echo -e "${YELLOW}Downloading Passwall 1 from GitHub releases...${NC}"
 
-# Download luci-app-passwall
+# Download luci-app-passwall (standalone file)
 echo "Downloading luci-app-passwall..."
-wget -q "${GITHUB_BASE}/luci-app-passwall_*.ipk" -O luci-app-passwall.ipk 2>/dev/null || \
-    wget -q "https://github.com/Openwrt-Passwall/openwrt-passwall/releases/download/packages/luci-app-passwall_*.ipk" -O luci-app-passwall.ipk
+wget --no-check-certificate "${GITHUB_PW}/luci-app-passwall_git-24.365.74654-a130463_all.ipk" -O luci-app-passwall.ipk 2>/dev/null || \
+    wget --no-check-certificate -O luci-app-passwall.ipk "$(wget -qO- https://api.github.com/repos/Openwrt-Passwall/openwrt-passwall/releases/latest | grep 'browser_download_url.*luci-app-passwall.*all.ipk' | cut -d '"' -f 4 | head -n1)"
 
-# Download core packages (xray, sing-box, etc)
-echo "Downloading core packages..."
+# Download passwall packages zip for architecture
+echo "Downloading core packages zip for ${arch}..."
+ZIP_FILE="passwall_packages_ipk_${arch}.zip"
+wget --no-check-certificate "${GITHUB_PW}/${ZIP_FILE}" -O packages.zip 2>/dev/null || \
+    wget --no-check-certificate -O packages.zip "$(wget -qO- https://api.github.com/repos/Openwrt-Passwall/openwrt-passwall/releases/latest | grep 'browser_download_url.*passwall_packages_ipk_'${arch}'.zip' | cut -d '"' -f 4 | head -n1)"
 
-# Try to download from packages repository
-CORE_PACKAGES="xray-core sing-box v2ray-core hysteria v2ray-plugin"
-
-for core in $CORE_PACKAGES; do
-    echo "  - $core"
-    wget -q "${PACKAGES_BASE}/${core}_*_${arch}.ipk" -O "${core}.ipk" 2>/dev/null
-done
+if [ -f "packages.zip" ] && [ -s "packages.zip" ]; then
+    echo "Extracting packages..."
+    unzip -q -o packages.zip
+else
+    echo -e "${YELLOW}Warning: Could not download packages zip, trying opkg install...${NC}"
+fi
 
 # Install downloaded packages
 echo -e "${YELLOW}Installing Passwall 1 packages...${NC}"
 
-for ipk in *.ipk; do
+# Find and install all ipk files
+find . -name "*.ipk" -type f | while read ipk; do
     if [ -f "$ipk" ] && [ -s "$ipk" ]; then
-        echo "Installing $ipk..."
-        opkg install "$ipk" --force-reinstall --force-overwrite
+        echo "Installing $(basename $ipk)..."
+        opkg install "$ipk" --force-reinstall --force-overwrite 2>/dev/null
     fi
 done
 
