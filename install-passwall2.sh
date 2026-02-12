@@ -45,7 +45,7 @@ if [ "$INSTALLED" == "/etc/init.d/passwall2" ]; then
     echo ""
     echo -e "${YELLOW}1.${NC} Update Passwall 2"
     echo -e "${YELLOW}2.${NC} Reinstall Passwall 2 (Clean install)"
-    echo -e "${YELLOW}3.${NC} Uninstall Passwall 2 (Remove all dependencies)"
+    echo -e "${YELLOW}3.${NC} Uninstall Passwall 2 (Keep core packages)"
     echo -e "${YELLOW}4.${NC} Exit"
     echo ""
     printf "Select option: "
@@ -89,9 +89,9 @@ case $choice in
     3)
         if [ "$INSTALLED" == "/etc/init.d/passwall2" ]; then
             MODE="uninstall"
-            echo -e "${RED}Uninstalling Passwall 2 and all dependencies...${NC}"
+            echo -e "${RED}Uninstalling Passwall 2...${NC}"
             echo ""
-            printf "Are you sure? This will remove all Passwall packages (y/n): "
+            printf "Are you sure? This will remove Passwall 2 (y/n): "
             read confirm
             if [ "$confirm" != "y" ]; then
                 echo -e "${YELLOW}Uninstall cancelled${NC}"
@@ -102,21 +102,13 @@ case $choice in
             /etc/init.d/passwall2 stop 2>/dev/null
             /etc/init.d/passwall2 disable 2>/dev/null
             
-            echo -e "${YELLOW}Removing Passwall 2 packages...${NC}"
-            # Remove main package
-            opkg remove luci-app-passwall2 --force-removal-of-dependent-packages
+            echo -e "${YELLOW}Removing Passwall 2...${NC}"
+            # Remove only the main Passwall 2 package
+            opkg remove luci-app-passwall2
+            opkg remove luci-i18n-passwall2-zh-cn 2>/dev/null
             
-            # Remove all core packages and dependencies
-            echo -e "${YELLOW}Removing core packages...${NC}"
-            opkg remove xray-core sing-box v2ray-core hysteria shadowsocks-rust-sslocal \
-                dns2socks dns2tcp brook chinadns-ng pdnsd-alt tcping naiveproxy \
-                ipt2socks shadowsocksr-libev-ssr-local simple-obfs trojan-plus \
-                trojan v2ray-plugin shadowsocks-libev-ss-local shadowsocks-libev-ss-redir \
-                shadowsocks-libev-ss-rules shadowsocks-libev-ss-tunnel hysteria2 \
-                tuic-client --force-removal-of-dependent-packages 2>/dev/null
-            
-            # Remove configuration and rules
-            echo -e "${YELLOW}Removing configuration files...${NC}"
+            # Remove only Passwall 2 configuration and rules
+            echo -e "${YELLOW}Removing Passwall 2 configuration files...${NC}"
             rm -rf /etc/config/passwall2
             rm -rf /usr/share/passwall2
             rm -rf /tmp/passwall2
@@ -125,6 +117,8 @@ case $choice in
             echo -e "${GREEN}========================================${NC}"
             echo -e "${GREEN}Passwall 2 uninstalled successfully!${NC}"
             echo -e "${GREEN}========================================${NC}"
+            echo -e "${CYAN}Note: Core packages (xray, sing-box, etc.) were not removed${NC}"
+            echo -e "${CYAN}They may be used by other applications${NC}"
             echo ""
             exit 0
         else

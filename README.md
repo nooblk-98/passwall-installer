@@ -32,8 +32,11 @@ Done !
 ✅ **Install** - Fresh installation from SourceForge official feeds  
 ✅ **Update** - Update existing installation (keeps your configuration)  
 ✅ **Reinstall** - Clean reinstall (removes and reinstalls fresh)  
-✅ **Uninstall** - Complete removal including all core dependencies  
+✅ **Uninstall** - Removes only the specific Passwall app (keeps core packages)  
 
-**Note:** All Passwall packages are installed from official SourceForge feeds, not from custom third-party repositories.
+**Note:** 
+- All Passwall packages are installed from official SourceForge feeds, not from custom third-party repositories
+- Uninstalling Passwall 1 does NOT remove Passwall 2 (and vice versa)
+- Core packages (xray-core, sing-box, etc.) are preserved as they may be used by other apps
 
 
