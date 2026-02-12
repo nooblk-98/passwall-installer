@@ -96,25 +96,36 @@ if [ -f "/tmp/passwall.pub" ]; then
     rm -f /tmp/passwall.pub
 fi
 
-# Backup existing custom feeds (keep OpenWrt official feeds)
+# Backup ALL existing custom/third-party feeds
 if [ -f "/etc/opkg/customfeeds.conf" ]; then
     cp /etc/opkg/customfeeds.conf /etc/opkg/customfeeds.conf.backup
 fi
 
-# Add SourceForge feeds to custom feeds (OpenWrt official feeds remain active)
+# Backup any other custom feed files (like noobwrt)
+for feedfile in /etc/opkg/*.conf; do
+    if [ "$feedfile" != "/etc/opkg/distfeeds.conf" ] && [ "$feedfile" != "/etc/opkg/customfeeds.conf" ]; then
+        if [ -f "$feedfile" ]; then
+            mv "$feedfile" "${feedfile}.backup"
+            echo "Disabled: $feedfile"
+        fi
+    fi
+done
+
+# Create clean customfeeds.conf with ONLY SourceForge feeds
 >/etc/opkg/customfeeds.conf
 
 read release arch << EOF
 $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
 EOF
 
-# Add SourceForge Passwall feeds - these will take priority
+# Add ONLY SourceForge Passwall feeds
 for feed in passwall_luci passwall_packages passwall2; do
   echo "src/gz $feed https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-$release/$arch/$feed" >> /etc/opkg/customfeeds.conf
 done
 
-echo -e "${GREEN}SourceForge feeds configured (OpenWrt official feeds remain active)${NC}"
+echo -e "${GREEN}SourceForge feeds configured${NC}"
 echo -e "${CYAN}Release: $release, Architecture: $arch${NC}"
+echo -e "${YELLOW}Third-party feeds temporarily disabled${NC}"
 
 # Update package lists
 opkg update
@@ -162,12 +173,22 @@ if [ -f "/etc/init.d/passwall" ]; then
     echo -e "${GREEN}========================================${NC}"
     echo ""
     
-    # Restore previous custom feeds if existed
+    # Restore all previous feed configurations
     if [ -f "/etc/opkg/customfeeds.conf.backup" ]; then
         echo -e "${YELLOW}Restoring previous custom feeds...${NC}"
         mv /etc/opkg/customfeeds.conf.backup /etc/opkg/customfeeds.conf
-        opkg update
     fi
+    
+    # Restore any other backed up feed files
+    for feedfile in /etc/opkg/*.conf.backup; do
+        if [ -f "$feedfile" ]; then
+            original="${feedfile%.backup}"
+            mv "$feedfile" "$original"
+            echo "Restored: $original"
+        fi
+    done
+    
+    opkg update
     
     # Enable and start service
     /etc/init.d/passwall enable
@@ -190,10 +211,18 @@ else
     echo ""
     echo -e "${RED}Installation failed!${NC}"
     
-    # Restore previous custom feeds if existed
+    # Restore all previous feed configurations
     if [ -f "/etc/opkg/customfeeds.conf.backup" ]; then
         mv /etc/opkg/customfeeds.conf.backup /etc/opkg/customfeeds.conf
     fi
+    
+    # Restore any other backed up feed files
+    for feedfile in /etc/opkg/*.conf.backup; do
+        if [ -f "$feedfile" ]; then
+            original="${feedfile%.backup}"
+            mv "$feedfile" "$original"
+        fi
+    done
     
     echo -e "${YELLOW}Trying alternative installation from opkg feeds...${NC}"
     opkg update
