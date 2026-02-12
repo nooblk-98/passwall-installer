@@ -87,7 +87,7 @@ echo -e "${YELLOW}Updating package lists...${NC}"
 opkg update
 
 # Add Passwall feeds from SourceForge
-echo -e "${YELLOW}Adding Passwall feeds...${NC}"
+echo -e "${YELLOW}Configuring Passwall feeds...${NC}"
 
 # Download and add GPG key
 wget --no-check-certificate -O /tmp/passwall.pub https://master.dl.sourceforge.net/project/openwrt-passwall-build/passwall.pub 2>/dev/null
@@ -96,20 +96,27 @@ if [ -f "/tmp/passwall.pub" ]; then
     rm -f /tmp/passwall.pub
 fi
 
-# Configure custom feeds
+# Backup existing custom feeds (keep OpenWrt official feeds)
+if [ -f "/etc/opkg/customfeeds.conf" ]; then
+    cp /etc/opkg/customfeeds.conf /etc/opkg/customfeeds.conf.backup
+fi
+
+# Add SourceForge feeds to custom feeds (OpenWrt official feeds remain active)
 >/etc/opkg/customfeeds.conf
 
 read release arch << EOF
 $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
 EOF
 
+# Add SourceForge Passwall feeds - these will take priority
 for feed in passwall_luci passwall_packages passwall2; do
   echo "src/gz $feed https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-$release/$arch/$feed" >> /etc/opkg/customfeeds.conf
 done
 
-echo -e "${GREEN}Feeds configured for release $release, architecture $arch${NC}"
+echo -e "${GREEN}SourceForge feeds configured (OpenWrt official feeds remain active)${NC}"
+echo -e "${CYAN}Release: $release, Architecture: $arch${NC}"
 
-# Update package lists with new feeds
+# Update package lists
 opkg update
 
 # Install dependencies
@@ -155,6 +162,13 @@ if [ -f "/etc/init.d/passwall" ]; then
     echo -e "${GREEN}========================================${NC}"
     echo ""
     
+    # Restore previous custom feeds if existed
+    if [ -f "/etc/opkg/customfeeds.conf.backup" ]; then
+        echo -e "${YELLOW}Restoring previous custom feeds...${NC}"
+        mv /etc/opkg/customfeeds.conf.backup /etc/opkg/customfeeds.conf
+        opkg update
+    fi
+    
     # Enable and start service
     /etc/init.d/passwall enable
     
@@ -175,6 +189,12 @@ if [ -f "/etc/init.d/passwall" ]; then
 else
     echo ""
     echo -e "${RED}Installation failed!${NC}"
+    
+    # Restore previous custom feeds if existed
+    if [ -f "/etc/opkg/customfeeds.conf.backup" ]; then
+        mv /etc/opkg/customfeeds.conf.backup /etc/opkg/customfeeds.conf
+    fi
+    
     echo -e "${YELLOW}Trying alternative installation from opkg feeds...${NC}"
     opkg update
     opkg install luci-app-passwall
