@@ -139,56 +139,13 @@ read release arch << EOF
 $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
 EOF
 
-# Set GitHub release URLs (official Openwrt-Passwall/openwrt-passwall repository)
-GITHUB_PW="https://github.com/Openwrt-Passwall/openwrt-passwall/releases/latest/download"
+echo -e "${CYAN}System: OpenWrt $release, Architecture: $arch${NC}"
+echo ""
 
-# Create temporary directory
-TMP_DIR="/tmp/passwall_install"
-rm -rf $TMP_DIR
-mkdir -p $TMP_DIR
-cd $TMP_DIR
+# Install Passwall 1 and all dependencies from feeds
+echo -e "${YELLOW}Installing Passwall 1 from feeds...${NC}"
 
-echo -e "${YELLOW}Downloading luci-app-passwall from GitHub...${NC}"
-
-# Download luci-app-passwall (standalone file)
-wget --no-check-certificate -O luci-app-passwall.ipk "${GITHUB_PW}/luci-app-passwall_git-24.365.74654-a130463_all.ipk" 2>/dev/null
-
-if [ ! -s "luci-app-passwall.ipk" ]; then
-    # Try to find the latest version via listing page
-    echo "Trying alternative download method..."
-    LATEST_URL=$(wget -qO- --no-check-certificate "https://github.com/Openwrt-Passwall/openwrt-passwall/releases/latest" | grep -o 'href="[^"]*luci-app-passwall[^"]*_all.ipk"' | head -n1 | sed 's/href="//;s/"//' | sed 's|^|https://github.com|')
-    if [ -n "$LATEST_URL" ]; then
-        wget --no-check-certificate -O luci-app-passwall.ipk "$LATEST_URL"
-    fi
-fi
-
-if [ ! -s "luci-app-passwall.ipk" ]; then
-    echo -e "${YELLOW}Could not download from GitHub, will use feed version${NC}"
-    LUCI_IPK=""
-else
-    echo -e "${GREEN}Downloaded luci-app-passwall from GitHub${NC}"
-    LUCI_IPK="$TMP_DIR/luci-app-passwall.ipk"
-fi
-
-# Install Passwall and dependencies
-echo -e "${YELLOW}Installing Passwall 1 and dependencies from feeds...${NC}"
-
-# Install dependencies and core packages from feeds
-echo "Installing core packages from feeds..."
-opkg install xray-core sing-box v2ray-core hysteria shadowsocks-rust-sslocal dns2socks dns2tcp brook chinadns-ng pdnsd-alt tcping naiveproxy ipt2socks shadowsocksr-libev-ssr-local simple-obfs trojan-plus trojan v2ray-plugin 2>/dev/null
-
-# Install the main LuCI app
-if [ -n "$LUCI_IPK" ] && [ -f "$LUCI_IPK" ]; then
-    echo -e "${CYAN}Installing luci-app-passwall from GitHub...${NC}"
-    opkg install "$LUCI_IPK" --force-reinstall --force-overwrite
-else
-    echo -e "${CYAN}Installing luci-app-passwall from feeds...${NC}"
-    opkg install luci-app-passwall
-fi
-
-# Cleanup
-cd /
-rm -rf $TMP_DIR
+opkg install luci-app-passwall
 
 # Verify installation
 if [ -f "/etc/init.d/passwall" ]; then
