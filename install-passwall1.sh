@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Passwall 1 Installer
 # Downloads IPK files directly from official GitHub releases
@@ -35,14 +35,16 @@ if [ "$INSTALLED" == "/etc/init.d/passwall" ]; then
     echo -e "${YELLOW}2.${NC} Reinstall Passwall 1 (Clean install)"
     echo -e "${YELLOW}3.${NC} Exit"
     echo ""
-    read -p "Select option: " choice
+    printf "Select option: "
+    read choice
 else
     echo -e "${YELLOW}Passwall 1 is not installed${NC}"
     echo ""
     echo -e "${YELLOW}1.${NC} Install Passwall 1"
     echo -e "${YELLOW}2.${NC} Exit"
     echo ""
-    read -p "Select option: " choice
+    printf "Select option: "
+    read choice
     
     if [ "$choice" == "2" ]; then
         exit 0
@@ -111,9 +113,9 @@ read release arch << EOF
 $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
 EOF
 
-# Set GitHub release URLs (official xiaorouji/openwrt-passwall repository)
-GITHUB_BASE="https://github.com/xiaorouji/openwrt-passwall/releases/latest/download"
-PACKAGES_BASE="https://github.com/xiaorouji/openwrt-passwall-packages/releases/latest/download"
+# Set GitHub release URLs (official Openwrt-Passwall/openwrt-passwall repository)
+GITHUB_BASE="https://github.com/Openwrt-Passwall/openwrt-passwall/releases/latest/download"
+PACKAGES_BASE="https://github.com/Openwrt-Passwall/openwrt-passwall-packages/releases/latest/download"
 
 # Create temporary directory
 TMP_DIR="/tmp/passwall_install"
@@ -126,7 +128,7 @@ echo -e "${YELLOW}Downloading Passwall 1 packages from GitHub...${NC}"
 # Download luci-app-passwall
 echo "Downloading luci-app-passwall..."
 wget -q "${GITHUB_BASE}/luci-app-passwall_*.ipk" -O luci-app-passwall.ipk 2>/dev/null || \
-    wget -q "https://github.com/xiaorouji/openwrt-passwall/releases/download/packages/luci-app-passwall_*.ipk" -O luci-app-passwall.ipk
+    wget -q "https://github.com/Openwrt-Passwall/openwrt-passwall/releases/download/packages/luci-app-passwall_*.ipk" -O luci-app-passwall.ipk
 
 # Download core packages (xray, sing-box, etc)
 echo "Downloading core packages..."

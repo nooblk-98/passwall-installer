@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Passwall 2 Installer
 # Downloads IPK files directly from official GitHub releases
@@ -30,7 +30,8 @@ TOTAL_RAM=$(free | grep Mem | awk '{print $2}')
 if [ $TOTAL_RAM -lt 250000 ]; then
     echo -e "${RED}WARNING: Passwall 2 requires at least 256MB RAM${NC}"
     echo -e "${YELLOW}Your system has less RAM. Installation may fail.${NC}"
-    read -p "Continue anyway? (y/n): " confirm
+    printf "Continue anyway? (y/n): "
+    read confirm
     if [ "$confirm" != "y" ]; then
         exit 0
     fi
@@ -46,14 +47,16 @@ if [ "$INSTALLED" == "/etc/init.d/passwall2" ]; then
     echo -e "${YELLOW}2.${NC} Reinstall Passwall 2 (Clean install)"
     echo -e "${YELLOW}3.${NC} Exit"
     echo ""
-    read -p "Select option: " choice
+    printf "Select option: "
+    read choice
 else
     echo -e "${YELLOW}Passwall 2 is not installed${NC}"
     echo ""
     echo -e "${YELLOW}1.${NC} Install Passwall 2"
     echo -e "${YELLOW}2.${NC} Exit"
     echo ""
-    read -p "Select option: " choice
+    printf "Select option: "
+    read choice
     
     if [ "$choice" == "2" ]; then
         exit 0
@@ -122,9 +125,9 @@ read release arch << EOF
 $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
 EOF
 
-# Set GitHub release URLs (official xiaorouji/openwrt-passwall2 repository)
-GITHUB_BASE="https://github.com/xiaorouji/openwrt-passwall2/releases/latest/download"
-PACKAGES_BASE="https://github.com/xiaorouji/openwrt-passwall-packages/releases/latest/download"
+# Set GitHub release URLs (official Openwrt-Passwall/openwrt-passwall2 repository)
+GITHUB_BASE="https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/latest/download"
+PACKAGES_BASE="https://github.com/Openwrt-Passwall/openwrt-passwall-packages/releases/latest/download"
 
 # Create temporary directory
 TMP_DIR="/tmp/passwall2_install"
@@ -137,7 +140,7 @@ echo -e "${YELLOW}Downloading Passwall 2 packages from GitHub...${NC}"
 # Download luci-app-passwall2
 echo "Downloading luci-app-passwall2..."
 wget -q "${GITHUB_BASE}/luci-app-passwall2_*.ipk" -O luci-app-passwall2.ipk 2>/dev/null || \
-    wget -q "https://github.com/xiaorouji/openwrt-passwall2/releases/download/packages/luci-app-passwall2_*.ipk" -O luci-app-passwall2.ipk
+    wget -q "https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/download/packages/luci-app-passwall2_*.ipk" -O luci-app-passwall2.ipk
 
 # Download core packages (xray, sing-box, etc)
 echo "Downloading core packages..."
