@@ -144,32 +144,60 @@ echo -e "${YELLOW}Downloading Passwall 2 from GitHub releases...${NC}"
 
 # Download luci-app-passwall2 (standalone file)
 echo "Downloading luci-app-passwall2..."
-wget --no-check-certificate "${GITHUB_PW2}/luci-app-passwall2_26.2.5-r1_all.ipk" -O luci-app-passwall2.ipk 2>/dev/null || \
-    wget --no-check-certificate -O luci-app-passwall2.ipk "$(wget -qO- https://api.github.com/repos/Openwrt-Passwall/openwrt-passwall2/releases/latest | grep 'browser_download_url.*luci-app-passwall2.*all.ipk' | cut -d '"' -f 4 | head -n1)"
+wget --no-check-certificate -O luci-app-passwall2.ipk "${GITHUB_PW2}/luci-app-passwall2_26.2.5-r1_all.ipk" 2>/dev/null
+
+if [ ! -s "luci-app-passwall2.ipk" ]; then
+    # Try to find the latest version via listing page
+    echo "Trying alternative download method..."
+    LATEST_URL=$(wget -qO- --no-check-certificate "https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/latest" | grep -o 'href="[^"]*luci-app-passwall2[^"]*_all.ipk"' | head -n1 | sed 's/href="//;s/"//' | sed 's|^|https://github.com|')
+    if [ -n "$LATEST_URL" ]; then
+        wget --no-check-certificate -O luci-app-passwall2.ipk "$LATEST_URL"
+    fi
+fi
 
 # Download passwall packages zip for architecture
 echo "Downloading core packages zip for ${arch}..."
 ZIP_FILE="passwall_packages_ipk_${arch}.zip"
-wget --no-check-certificate "${GITHUB_PW2}/${ZIP_FILE}" -O packages.zip 2>/dev/null || \
-    wget --no-check-certificate -O packages.zip "$(wget -qO- https://api.github.com/repos/Openwrt-Passwall/openwrt-passwall2/releases/latest | grep 'browser_download_url.*passwall_packages_ipk_'${arch}'.zip' | cut -d '"' -f 4 | head -n1)"
+wget --no-check-certificate -O packages.zip "${GITHUB_PW2}/${ZIP_FILE}" 2>/dev/null
+
+if [ ! -s "packages.zip" ]; then
+    echo "Direct download failed, trying alternative..."
+    ZIP_URL=$(wget -qO- --no-check-certificate "https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/latest" | grep -o "href=\"[^\"]*passwall_packages_ipk_${arch}.zip\"" | head -n1 | sed 's/href="//;s/"//' | sed 's|^|https://github.com|')
+    if [ -n "$ZIP_URL" ]; then
+        wget --no-check-certificate -O packages.zip "$ZIP_URL"
+    fi
+fi
 
 if [ -f "packages.zip" ] && [ -s "packages.zip" ]; then
     echo "Extracting packages..."
     unzip -q -o packages.zip
 else
     echo -e "${YELLOW}Warning: Could not download packages zip${NC}"
+    echo -e "${YELLOW}Will try to install core packages from opkg...${NC}"
 fi
 
 # Install downloaded packages
 echo -e "${YELLOW}Installing Passwall 2 packages...${NC}"
 
 # Find and install all ipk files
+IPK_COUNT=0
 find . -name "*.ipk" -type f | while read ipk; do
     if [ -f "$ipk" ] && [ -s "$ipk" ]; then
         echo "Installing $(basename $ipk)..."
         opkg install "$ipk" --force-reinstall --force-overwrite 2>/dev/null
+        IPK_COUNT=$((IPK_COUNT + 1))
     fi
 done
+
+# If no packages were extracted from zip, install cores from opkg
+if [ $IPK_COUNT -lt 5 ]; then
+    echo -e "${YELLOW}Installing core packages from opkg...${NC}"
+    opkg update
+    opkg install xray-core 2>/dev/null || echo "  xray-core not available"
+    opkg install sing-box 2>/dev/null || echo "  sing-box not available"
+    opkg install v2ray-core 2>/dev/null || echo "  v2ray-core not available"
+    opkg install hysteria 2>/dev/null || echo "  hysteria not available"
+fi
 
 # Cleanup
 cd /
