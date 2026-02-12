@@ -98,6 +98,32 @@ esac
 echo -e "${YELLOW}Updating package lists...${NC}"
 opkg update
 
+# Add Passwall feeds from SourceForge
+echo -e "${YELLOW}Adding Passwall feeds...${NC}"
+
+# Download and add GPG key
+wget --no-check-certificate -O /tmp/passwall.pub https://master.dl.sourceforge.net/project/openwrt-passwall-build/passwall.pub 2>/dev/null
+if [ -f "/tmp/passwall.pub" ]; then
+    opkg-key add /tmp/passwall.pub
+    rm -f /tmp/passwall.pub
+fi
+
+# Configure custom feeds
+>/etc/opkg/customfeeds.conf
+
+read release arch << EOF
+$(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
+EOF
+
+for feed in passwall_luci passwall_packages passwall2; do
+  echo "src/gz $feed https://master.dl.sourceforge.net/project/openwrt-passwall-build/releases/packages-$release/$arch/$feed" >> /etc/opkg/customfeeds.conf
+done
+
+echo -e "${GREEN}Feeds configured for release $release, architecture $arch${NC}"
+
+# Update package lists with new feeds
+opkg update
+
 # Install dependencies
 echo -e "${YELLOW}Installing dependencies...${NC}"
 
@@ -120,12 +146,6 @@ for pkg in $PACKAGES; do
     fi
 done
 
-# Ensure unzip is installed (critical for extracting packages)
-if ! which unzip >/dev/null 2>&1; then
-    echo -e "${RED}Error: unzip is required but not installed!${NC}"
-    opkg install unzip || exit 1
-fi
-
 # Get architecture for downloads
 read release arch << EOF
 $(. /etc/openwrt_release ; echo ${DISTRIB_RELEASE%.*} $DISTRIB_ARCH)
@@ -140,10 +160,9 @@ rm -rf $TMP_DIR
 mkdir -p $TMP_DIR
 cd $TMP_DIR
 
-echo -e "${YELLOW}Downloading Passwall 2 from GitHub releases...${NC}"
+echo -e "${YELLOW}Downloading luci-app-passwall2 from GitHub...${NC}"
 
 # Download luci-app-passwall2 (standalone file)
-echo "Downloading luci-app-passwall2..."
 wget --no-check-certificate -O luci-app-passwall2.ipk "${GITHUB_PW2}/luci-app-passwall2_26.2.5-r1_all.ipk" 2>/dev/null
 
 if [ ! -s "luci-app-passwall2.ipk" ]; then
@@ -155,48 +174,28 @@ if [ ! -s "luci-app-passwall2.ipk" ]; then
     fi
 fi
 
-# Download passwall packages zip for architecture
-echo "Downloading core packages zip for ${arch}..."
-ZIP_FILE="passwall_packages_ipk_${arch}.zip"
-wget --no-check-certificate -O packages.zip "${GITHUB_PW2}/${ZIP_FILE}" 2>/dev/null
-
-if [ ! -s "packages.zip" ]; then
-    echo "Direct download failed, trying alternative..."
-    ZIP_URL=$(wget -qO- --no-check-certificate "https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/latest" | grep -o "href=\"[^\"]*passwall_packages_ipk_${arch}.zip\"" | head -n1 | sed 's/href="//;s/"//' | sed 's|^|https://github.com|')
-    if [ -n "$ZIP_URL" ]; then
-        wget --no-check-certificate -O packages.zip "$ZIP_URL"
-    fi
-fi
-
-if [ -f "packages.zip" ] && [ -s "packages.zip" ]; then
-    echo "Extracting packages..."
-    unzip -q -o packages.zip
+if [ ! -s "luci-app-passwall2.ipk" ]; then
+    echo -e "${YELLOW}Could not download from GitHub, will use feed version${NC}"
+    LUCI_IPK=""
 else
-    echo -e "${YELLOW}Warning: Could not download packages zip${NC}"
-    echo -e "${YELLOW}Will try to install core packages from opkg...${NC}"
+    echo -e "${GREEN}Downloaded luci-app-passwall2 from GitHub${NC}"
+    LUCI_IPK="$TMP_DIR/luci-app-passwall2.ipk"
 fi
 
-# Install downloaded packages
-echo -e "${YELLOW}Installing Passwall 2 packages...${NC}"
+# Install Passwall 2 and dependencies
+echo -e "${YELLOW}Installing Passwall 2 and dependencies from feeds...${NC}"
 
-# Find and install all ipk files
-IPK_COUNT=0
-find . -name "*.ipk" -type f | while read ipk; do
-    if [ -f "$ipk" ] && [ -s "$ipk" ]; then
-        echo "Installing $(basename $ipk)..."
-        opkg install "$ipk" --force-reinstall --force-overwrite 2>/dev/null
-        IPK_COUNT=$((IPK_COUNT + 1))
-    fi
-done
+# Install dependencies and core packages from feeds
+echo "Installing core packages from feeds..."
+opkg install xray-core sing-box v2ray-core hysteria shadowsocks-rust-sslocal dns2socks dns2tcp brook chinadns-ng pdnsd-alt tcping naiveproxy ipt2socks shadowsocksr-libev-ssr-local simple-obfs trojan-plus trojan v2ray-plugin 2>/dev/null
 
-# If no packages were extracted from zip, install cores from opkg
-if [ $IPK_COUNT -lt 5 ]; then
-    echo -e "${YELLOW}Installing core packages from opkg...${NC}"
-    opkg update
-    opkg install xray-core 2>/dev/null || echo "  xray-core not available"
-    opkg install sing-box 2>/dev/null || echo "  sing-box not available"
-    opkg install v2ray-core 2>/dev/null || echo "  v2ray-core not available"
-    opkg install hysteria 2>/dev/null || echo "  hysteria not available"
+# Install the main LuCI app
+if [ -n "$LUCI_IPK" ] && [ -f "$LUCI_IPK" ]; then
+    echo -e "${CYAN}Installing luci-app-passwall2 from GitHub...${NC}"
+    opkg install "$LUCI_IPK" --force-reinstall --force-overwrite
+else
+    echo -e "${CYAN}Installing luci-app-passwall2 from feeds...${NC}"
+    opkg install luci-app-passwall2
 fi
 
 # Cleanup
