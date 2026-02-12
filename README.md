@@ -15,12 +15,16 @@
      
 # INSTALL PASSWALL : 
 
-🔴🔴🔴 The Routers With `128 MB RAM Memory` , Please `downgrade` to [OPENWRT 22.03.3](https://archive.openwrt.org/releases/22.03.3/targets/) 🔴🔴🔴
+## Passwall 1 (128MB+ RAM)
+```bash
+rm -f install-passwall1.sh && wget --no-cache -O install-passwall1.sh https://raw.githubusercontent.com/nooblk-98/passwall-installer/refs/heads/main/install-passwall1.sh && chmod +x install-passwall1.sh && sh install-passwall1.sh
+```
 
-Run this command in openwrt remote ssh
+## Passwall 2 (256MB+ RAM)
+```bash
+rm -f install-passwall2.sh && wget --no-cache -O install-passwall2.sh https://raw.githubusercontent.com/nooblk-98/passwall-installer/refs/heads/main/install-passwall2.sh && chmod +x install-passwall2.sh && sh install-passwall2.sh
 ```
-rm -f passwallx.sh && wget https://raw.githubusercontent.com/amirhosseinchoghaei/Passwall/main/passwallx.sh && chmod 777 passwallx.sh && sh passwallx.sh
-```
+
 Done !
 
 # Types Support
