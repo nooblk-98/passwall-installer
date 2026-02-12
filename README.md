@@ -27,3 +27,13 @@ rm -f install-passwall2.sh && wget -O install-passwall2.sh https://raw.githubuse
 
 Done !
 
+# Script Features:
+
+✅ **Install** - Fresh installation from SourceForge official feeds  
+✅ **Update** - Update existing installation (keeps your configuration)  
+✅ **Reinstall** - Clean reinstall (removes and reinstalls fresh)  
+✅ **Uninstall** - Complete removal including all core dependencies  
+
+**Note:** All Passwall packages are installed from official SourceForge feeds, not from custom third-party repositories.
+
+
